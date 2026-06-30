@@ -2,6 +2,8 @@
 South Carolina MHC Placement Decision Tool (v9.4 advanced settings + multi previous deployment)
 ===============================================================
 
+Panel version
+
 Best combined version composed from the two v9 drafts.
 
 Core changes retained and strengthened
