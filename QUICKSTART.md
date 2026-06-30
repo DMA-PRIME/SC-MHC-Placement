@@ -13,11 +13,11 @@
 cd sc_location_tool
 
 # Create and activate virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+py -3.11 -m venv venv
+.\venv\Scripts\Activate.ps1  # On Windows PowerShell
 
 # Install dependencies (takes 5-10 minutes)
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
 ### 3. Configure Your Data Path
