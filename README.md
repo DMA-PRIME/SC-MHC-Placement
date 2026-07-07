@@ -1,286 +1,585 @@
-# South Carolina MHC Placement Decision Tool
+# South Carolina Mobile Health Clinic Placement Decision Tool
 
-A Python-based interactive web application for optimal facility location selection using Maximum Coverage Location-Allocation analysis. Built with Streamlit for geospatial analysis of healthcare facility placement in South Carolina.
-https://mhc-placement-sc.streamlit.app/
+A Streamlit-based decision-support web tool for identifying high-impact deployment locations for Mobile Health Clinics (MHCs) in South Carolina. The tool uses geospatial demand data, candidate community sites, and travel-time thresholds to recommend MHC locations that maximize coverage of a selected target population.
+
+This repository operationalizes the mobile health clinic placement framework described in:
+
+> Tanim SH, White DL, Witrick B, Rennert L. **Optimizing mobile health clinic placement via geospatial modeling.** *Public Health in Practice.* 2026;11:100805. https://doi.org/10.1016/j.puhip.2026.100805
+
+The published study demonstrated that optimized MHC placement can substantially increase the uninsured population reached within practical driving and walking thresholds. This web tool translates that framework into an interactive planning workflow for comparing deployment alternatives, reviewing feasibility, and exporting field-ready site lists.
+
+---
+
+## Table of contents
+
+- [Overview](#overview)
+- [Key features](#key-features)
+- [Optimization method](#optimization-method)
+- [Travel-time modes](#travel-time-modes)
+- [Data inputs](#data-inputs)
+- [Target population variables](#target-population-variables)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Running the app](#running-the-app)
+- [Using the web tool](#using-the-web-tool)
+- [Outputs and exports](#outputs-and-exports)
+- [Suggested repository structure](#suggested-repository-structure)
+- [Methodological notes and limitations](#methodological-notes-and-limitations)
+- [Citation](#citation)
+- [Acknowledgments](#acknowledgments)
+- [License](#license)
+
+---
+
 ## Overview
 
-This tool helps identify optimal facility locations to maximize coverage of uninsured populations within specified travel times. It uses:
-- **Maximum Coverage Location Problem (MCLP)** optimization
-- **Network-based or Manhattan distance** travel time calculations
-- **Interactive mapping** with Folium
-- **Real geospatial data** for South Carolina ZIP codes, facilities, and demand points
+Mobile Health Clinics can reduce geographic and transportation barriers by bringing services directly to communities. However, choosing deployment sites based only on convenience can miss high-need populations or create redundant service areas. This tool supports systematic placement decisions by combining:
 
-## Features
+- candidate MHC deployment locations,
+- census block or small-area demand points,
+- user-selected target population weights,
+- drive or walk travel-time thresholds,
+- a Maximum Coverage Location Problem (MCLP) optimization model,
+- interactive maps and exportable site tables.
 
-- ✅ Interactive ZIP code selection with dropdown
-- ✅ Multi-select facility types (Churches, Community Health Clinics, Food Banks, Homeless Services, Hospitals, Rural Primary Care)
-- ✅ Travel mode selection (Driving or Walking)
-- ✅ Configurable travel time thresholds (5–45 minutes)
-- ✅ Adjustable number of facilities to select
-- ✅ Network-based travel time analysis using OSMnx
-- ✅ Manhattan distance approximation (faster alternative)
-- ✅ Interactive map with zoom and pan
-- ✅ Coverage statistics and metrics
-- ✅ Export results as CSV or GeoJSON
+The current app version is:
 
-## Requirements
+```text
+v9.6 coverage + travel-time ranking + distinct backups
+```
 
-- Python 3.9 or higher
-- Data file: `sc_app_data.json` (place in the project root folder)
+The app is currently designed for South Carolina ZIP-code-based planning, but the workflow can be adapted to other geographies if the input JSON follows the expected schema.
+
+---
+
+## Key features
+
+### 1. County and ZIP-level planning
+
+Users can begin with a South Carolina county, view ZIP codes inside or overlapping the county, and then select a ZIP code for optimization. ZIP choices are ranked by the selected target variable when demand data are available.
+
+### 2. Flexible target population selection
+
+The sidebar allows users to optimize for different need measures, such as uninsured population, age-specific uninsured groups, older adults, zero-vehicle households, non-English-speaking households, veterans, workers, and other demographic groups.
+
+### 3. MCLP-based site selection
+
+The model selects a fixed number of MHC sites that maximize the covered target population within the selected travel-time threshold. For example, if the user selects 3 MHCs and a 5-minute drive threshold, the tool recommends a three-site deployment plan that maximizes covered demand within 5 minutes.
+
+### 4. Ranked alternative deployment plans
+
+The tool separates:
+
+- **Number of MHCs to deploy**: how many mobile clinics are available at the same time.
+- **Alternative plans to show**: how many ranked backup deployment configurations to display.
+
+For one MHC, the app ranks individual candidate sites. For two or more MHCs, it repeatedly solves the MCLP and applies no-good or diversity constraints to generate useful backup plans.
+
+### 5. Coverage-first ranking with travel-time tie-breaking
+
+Plans are ranked lexicographically:
+
+1. highest covered demand first;
+2. lower weighted average nearest travel time among equal-coverage or tied solutions;
+3. stable site ordering for reproducible display.
+
+### 6. More distinct backup plans
+
+By default, backup plans prefer site-distinct alternatives so that multiple recommended plans do not simply repeat the same locations. This is useful when decision-makers need practical backup options if a site is unavailable.
+
+### 7. Previous deployment mode
+
+When a deployment has already occurred, users can add one or more previous deployment locations. The app can exclude demand already covered by those locations and optimize for newly reachable demand.
+
+Previous deployment locations can be entered by:
+
+- selecting one or more existing candidate sites, or
+- entering custom latitude/longitude coordinates.
+
+### 8. Pre-run and post-run site exclusion
+
+The app supports two site exclusion workflows:
+
+- **Pre-run exclusion**: remove known infeasible or unavailable sites before optimization.
+- **Post-run review**: inspect recommended sites, mark them infeasible/unavailable, and rerun the optimizer using the remaining candidates.
+
+### 9. Operational feasibility fields
+
+If the candidate site data include feasibility fields, the app displays and exports them. Supported optional fields include:
+
+- `feasibility_status`
+- `parking`
+- `restroom`
+- `wifi`
+- `ada`
+- `permission`
+- `field_notes`
+
+These fields are not required for the model to run, but they help support field verification and real-world deployment planning.
+
+### 10. Fleet size scenario analysis
+
+The tool can run exact best-plan coverage analysis for multiple fleet sizes, such as 1 through 5 MHCs. This helps users understand diminishing returns and marginal gains from adding more mobile clinics.
+
+### 11. Interactive maps
+
+The app uses Folium and Streamlit-Folium to display:
+
+- county overview maps,
+- selected ZIP maps,
+- candidate site locations,
+- selected MHC sites,
+- covered and uncovered demand points,
+- muted non-selected candidates after optimization,
+- previous deployment locations when extension planning is active.
+
+### 12. Exportable results
+
+Users can export:
+
+- best plan site list as CSV,
+- all plan summary as CSV,
+- field verification CSV,
+- best plan selected sites as GeoJSON.
+
+---
+
+## Optimization method
+
+The core optimization model is a Maximum Coverage Location Problem (MCLP).
+
+Let:
+
+- `i` index candidate MHC sites,
+- `j` index demand points,
+- `w_j` be the target population weight at demand point `j`,
+- `p` be the number of MHCs to deploy,
+- `a_ij = 1` if candidate site `i` covers demand point `j` within the selected travel-time threshold, and `0` otherwise,
+- `x_i = 1` if candidate site `i` is selected,
+- `y_j = 1` if demand point `j` is covered by at least one selected site.
+
+The primary objective is:
+
+```text
+maximize sum_j w_j * y_j
+```
+
+Subject to:
+
+```text
+sum_i x_i = p
+
+y_j <= sum_i a_ij * x_i    for every demand point j
+
+x_i, y_j in {0, 1}
+```
+
+The app first maximizes covered demand. When a valid travel-time matrix is available, a second-stage tie-breaker keeps the same maximum coverage value and minimizes weighted travel time among tied solutions.
+
+For multiple alternative plans, the app repeatedly solves the model while adding constraints that prevent duplicate or overly similar site sets.
+
+---
+
+## Travel-time modes
+
+The app supports two accessibility modes.
+
+### Manhattan-style distance, default
+
+This is the fast default option. It computes projected rectilinear distance between each candidate site and demand point, multiplies by a circuity factor, and converts the result to estimated travel time.
+
+Use this mode for quick screening, demonstrations, or situations where road-network routing is not needed.
+
+### Road-network routing, optional
+
+The optional road-network mode uses OSMnx and NetworkX to build an OpenStreetMap-based routing graph. Travel times are estimated from network distance and speed assumptions. Missing speeds are imputed by road class.
+
+Use this mode when a more realistic network-based coverage estimate is needed. The first run for a new geography may take longer because the app must download and cache the local road network.
+
+Important notes:
+
+- Road-network travel time is not live traffic.
+- Time-of-day congestion is not modeled.
+- OpenStreetMap coverage and road attributes may vary by location.
+- The published paper used ArcGIS Network Analyst and Esri StreetMap Premium; this open-source web implementation uses OSMnx for optional network routing.
+
+---
+
+## Data inputs
+
+The app expects a JSON file referenced by `JSON_PATH` in `config.py`.
+
+### Top-level JSON structure
+
+```json
+{
+  "counties": {
+    "045": {
+      "name": "Greenville",
+      "coords": [[34.0, -82.0], [34.1, -82.0], [34.1, -82.1]]
+    }
+  },
+  "zip_boundaries": {
+    "29601": {
+      "po_name": "Greenville",
+      "coords": [[34.84, -82.41], [34.85, -82.41], [34.85, -82.40]]
+    }
+  },
+  "candidate_facilities": [
+    {
+      "facility_id": "site_001",
+      "name": "Example Community Center",
+      "type": "Community Centers",
+      "address": "123 Main St",
+      "latitude": 34.8500,
+      "longitude": -82.4000,
+      "feasibility_status": "Unknown",
+      "parking": "Yes",
+      "restroom": "Yes",
+      "wifi": "Unknown",
+      "ada": "Unknown",
+      "permission": "Pending",
+      "field_notes": ""
+    }
+  ],
+  "demand_points": [
+    {
+      "dem_id": "block_001",
+      "latitude": 34.8510,
+      "longitude": -82.4020,
+      "uninsured_pop": 25,
+      "tot_pop": 120,
+      "zero_vehicle_hh": 8
+    }
+  ]
+}
+```
+
+### Required elements
+
+The app requires:
+
+- `counties`
+- `zip_boundaries` or `zips`
+- `candidate_facilities` or `facilities`
+- `demand_points` or `demand`
+- `latitude` and `longitude` for every candidate site
+- `latitude` and `longitude` for every demand point
+- at least one demand weight variable used by the target selector
+
+### Coordinate format for boundaries
+
+Boundary coordinates in the JSON are expected as:
+
+```text
+[latitude, longitude]
+```
+
+The app converts these to the longitude-latitude order used by Shapely.
+
+### Candidate facility fields
+
+Required:
+
+| Field | Description |
+|---|---|
+| `latitude` | Site latitude |
+| `longitude` | Site longitude |
+
+Recommended:
+
+| Field | Description |
+|---|---|
+| `facility_id` | Stable site identifier |
+| `name` | Site name |
+| `type` | Site category, such as clinic, school, food mall, faith-based organization, community center |
+| `address` | Site address |
+
+Optional feasibility fields:
+
+| Field | Description |
+|---|---|
+| `feasibility_status` | Feasible, infeasible, unavailable, unknown, etc. |
+| `parking` | Parking availability |
+| `restroom` | Restroom availability |
+| `wifi` | WiFi availability |
+| `ada` | ADA accessibility |
+| `permission` | Permission or venue approval status |
+| `field_notes` | Notes for field verification |
+
+### Demand point fields
+
+Required:
+
+| Field | Description |
+|---|---|
+| `latitude` | Demand point latitude |
+| `longitude` | Demand point longitude |
+
+At least one target variable column should be present, such as `uninsured_pop` or `tot_pop`.
+
+---
+
+## Target population variables
+
+The tool displays only target variables that are present in the demand point data.
+
+| UI label | JSON column |
+|---|---|
+| Uninsured Population | `uninsured_pop` |
+| Total Population | `tot_pop` |
+| Disease burden (placeholder) | `tot_hh` |
+| Male Adult Population (20+) | `male_adult` |
+| Female Adult Population (20+) | `female_adult` |
+| Uninsured Under 19 | `uninsured_under19` |
+| Uninsured 20-34 | `uninsured_20_34` |
+| Uninsured 35-64 | `uninsured_35_64` |
+| Uninsured 65+ | `uninsured_65plus` |
+| Population 0-5 | `pop_0_5` |
+| Population 0-19 | `pop_0_19` |
+| Population 20-34 | `pop_20_34` |
+| Population 35-64 | `pop_35_64` |
+| Population 65+ | `pop_65plus` |
+| Non-White Population | `nonwhite_pop` |
+| Hispanic Population | `hispanic_pop` |
+| Zero-Vehicle Households | `zero_vehicle_hh` |
+| Enrolled in School | `enrolled_school` |
+| Non-English at Home | `non_english_home` |
+| Worker Population | `worker_pop` |
+| Veteran Population | `veteran_pop` |
+
+---
 
 ## Installation
 
-### Step 1: Create a Virtual Environment (Recommended)
+Python 3.10 or 3.11 is recommended.
+
+### Option 1: pip
 
 ```bash
-# Navigate to your project directory
-cd /path/to/sc_location_tool
-
-# Create virtual environment
-python3 -m venv venv
-
-# Activate virtual environment
-# On macOS/Linux:
-source venv/bin/activate
-# On Windows:
-venv\Scripts\activate
+git clone <repository-url>
+cd <repository-name>
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+python -m pip install --upgrade pip
+python -m pip install streamlit pandas numpy geopandas shapely folium streamlit-folium osmnx networkx "pulp[cbc]"
 ```
 
-### Step 2: Install Dependencies
+### Option 2: conda, recommended on Windows for geospatial dependencies
 
 ```bash
-pip install -r requirements.txt
+conda create -n mhc-placement python=3.11 -y
+conda activate mhc-placement
+conda install -c conda-forge streamlit pandas numpy geopandas shapely folium osmnx networkx pulp -y
+python -m pip install streamlit-folium
 ```
 
-> **Note:** Installation may take 5–10 minutes due to geospatial libraries.
+If the CBC solver is not available through PuLP in your environment, install CBC through conda-forge:
 
-### Step 3: Configure Data Path
+```bash
+conda install -c conda-forge coincbc -y
+```
 
-Open `config.py` and update `JSON_PATH` to point to your data file:
+---
+
+## Configuration
+
+Create a file named `config.py` in the repository root:
 
 ```python
-JSON_PATH = Path("sc_app_data.json")  # relative path if file is in the project root
-# or an absolute path, e.g.:
-# JSON_PATH = Path("/your/full/path/to/sc_app_data.json")
+from pathlib import Path
+
+JSON_PATH = Path("data/sc_mhc_input.json")
 ```
 
-If `JSON_PATH` is not found and `ALLOW_FILE_UPLOAD = True`, the app will prompt you to upload the file directly in the browser.
+Place your prepared JSON data at that path.
 
-## Data Format Requirements
+### OSMnx cache directory, optional
 
-Your JSON file must contain three top-level sections:
-
-### 1. ZIP Code Boundaries (`zips`)
-```json
-{
-  "zips": {
-    "29630": {
-      "po_name": "Clemson",
-      "coords": [[lat, lon], [lat, lon], ...]
-    }
-  }
-}
-```
-
-### 2. Candidate Facilities (`facilities`)
-```json
-{
-  "facilities": [
-    {
-      "facility_id": "F001",
-      "type": "Churches",
-      "name": "First Baptist Church",
-      "address": "123 Main St",
-      "latitude": 34.6834,
-      "longitude": -82.8374,
-      "zip_code": "29630"
-    }
-  ]
-}
-```
-
-Valid `type` values: `Churches`, `Community Health Clinics`, `Food Banks`, `Homeless Services`, `Hospitals`, `Rural Primary Care`
-
-### 3. Demand Points (`demand`)
-```json
-{
-  "demand": [
-    {
-      "demand_id": "D001",
-      "uninsured_pop": 150,
-      "latitude": 34.6850,
-      "longitude": -82.8400,
-      "zip_code": "29630"
-    }
-  ]
-}
-```
-
-## Running the Application
+The app automatically attempts to configure a writable cache directory for OSMnx. You can override the cache location with:
 
 ```bash
-# Activate your virtual environment first
-source venv/bin/activate   # macOS/Linux
-venv\Scripts\activate      # Windows
+export MHC_OSMNX_CACHE_DIR="/path/to/osmnx_cache"
+```
 
-# Run the app
+On Windows PowerShell:
+
+```powershell
+$env:MHC_OSMNX_CACHE_DIR="C:\Users\<you>\AppData\Local\MHC_Placement_Tool\osmnx_cache"
+```
+
+---
+
+## Running the app
+
+```bash
 streamlit run app.py
 ```
 
-The app will open automatically at `http://localhost:8501`.
+The app will open in a browser window. If it does not open automatically, Streamlit will print a local URL in the terminal.
 
-You can also use the provided setup scripts:
-- **macOS/Linux**: `bash setup.sh`
-- **Windows**: `setup.bat`
+---
 
-## Usage Guide
+## Using the web tool
 
-### 1. Set Parameters (Sidebar)
+1. Click **Calculate Optimal Sites** after selecting all planning inputs.
+2. Choose a **target category** and target measure, such as uninsured population.
+3. Select a **county** or search any South Carolina ZIP code.
+4. Choose candidate **site types** to include.
+5. Open **Advanced settings** when needed to:
+   - add previous deployment locations,
+   - prefer site-distinct backup plans,
+   - exclude known infeasible sites,
+   - enable fleet size scenario analysis,
+   - adjust map display settings.
+6. Choose the **number of MHCs to deploy**.
+7. Choose the number of **alternative plans to show**.
+8. Select travel mode: **drive** or **walk**.
+9. Select the maximum travel-time threshold.
+10. Optional: enable road-network routing for network-based travel-time estimates.
+11. Review the plan comparison table, plan maps, and site-level metrics.
+12. Mark infeasible or unavailable recommended sites and rerun, if needed.
+13. Export CSV or GeoJSON outputs for reporting or field verification.
 
-| Control | Description |
-|---|---|
-| **Focus ZIP Code** | Select a ZIP code from the dropdown (includes city name) |
-| **Eligible Site Types** | Choose which facility types to include |
-| **Travel Mode** | Drive or Walk |
-| **Max Travel Time** | Coverage threshold in minutes (5–45 min) |
-| **Target Number of Sites** | How many facilities to optimally select |
-| **Enable Road-Network Routing** | Toggle for OSM road network (accurate but slower) vs. Manhattan distance (fast) |
+---
 
-### 2. Run the Analysis
+## Outputs and exports
 
-Click **"🚀 Calculate Optimal Sites"** to:
-- Build a coverage matrix based on travel times
-- Solve the Maximum Coverage optimization problem
-- Display selected facilities on the map
-- Show coverage statistics
+### On-screen outputs
 
-### 3. View Results
+The tool displays:
 
-**Interactive Map:**
-- Blue boundary = Selected ZIP code
-- Colored markers = Candidate facilities by type (purple = Churches, red = Community Health Clinics, green = Food Banks, blue = Homeless Services, dark red = Hospitals, pink = Rural Primary Care)
-- Gold stars = Optimally selected facilities
-- Yellow/green circles = Demand points (sized by uninsured population; green = covered, yellow = uncovered)
+- summary statistics for the selected ZIP code,
+- ranked deployment plan comparison table,
+- selected-site maps for each plan,
+- detailed coverage map for each plan,
+- site-level metrics,
+- fleet size scenario analysis when enabled.
 
-**Summary Statistics Panel:**
-- Total uninsured population in ZIP
-- Number of available candidate sites
-- Covered uninsured population and percentage
-- Covered vs. total demand points
+### Plan comparison table
 
-### 4. Export Results
+The plan comparison table includes:
 
-Download the selected facilities as:
-- **CSV** — for spreadsheet analysis
-- **GeoJSON** — for GIS software (QGIS, ArcGIS, etc.)
+- plan rank,
+- number of sites in the plan,
+- covered target population,
+- coverage percentage,
+- average nearest travel time,
+- loss compared with best plan,
+- selected site names,
+- selected site types.
 
-## Coverage Calculation Method
+### Site-level metrics
 
-### Coverage Definition
-A demand point (census block centroid) is "covered" if it falls within the specified travel time threshold of at least one selected facility. Total coverage = sum of uninsured population at all covered demand points.
+For each selected site, the tool reports:
 
-### Travel Time Methods
+- **Gross covered demand**: demand the site could reach by itself.
+- **Marginal contribution**: coverage lost if that site is removed from the selected plan.
 
-#### Manhattan Distance (Default — Fast)
-- Rectilinear distance multiplied by a road circuity factor of 1.20
-- Driving speed: 25 mph average
-- Walking speed: 5 km/h (3.1 mph)
-- No internet connection required
+The marginal contribution metric is especially useful for multi-site plans because it identifies which selected sites add unique non-overlapping coverage.
 
-#### Road Network Analysis (Optional — More Accurate)
-- Road network downloaded from OpenStreetMap via OSMnx
-- Speed data from actual OSM `maxspeed` tags, with SC-appropriate fallbacks per road class
-- Routing via Dijkstra's shortest path with a 5-second turn penalty per edge
-- Network is cached after the first download per ZIP code
+### Downloadable files
 
-### Optimization Model
-**Maximum Coverage Location Problem (MCLP)**:
-- **Objective**: Maximize total uninsured population covered within the travel time threshold
-- **Constraint**: Select exactly the specified number of facilities
-- **Solver**: PuLP with the CBC (COIN-OR Branch and Cut) integer linear programming solver
+The app can export:
 
-## Troubleshooting
+| Export | Format | Description |
+|---|---|---|
+| Best Plan Sites | CSV | Site list for the top-ranked plan |
+| All Plan Summary | CSV | Summary table for all ranked plans |
+| Field Verification | CSV | All plan sites with field feasibility columns |
+| Best Plan Sites | GeoJSON | Selected sites from the best plan for GIS use |
 
-| Problem | Solution |
-|---|---|
-| **Error loading data** | Check `JSON_PATH` in `config.py`; ensure the file is valid JSON with all required fields |
-| **No candidate facilities available** | Try different facility types or a different ZIP code |
-| **Network analysis is slow** | First download takes 1–2 min per ZIP; use Manhattan distance for faster results |
-| **Import errors** | Re-run `pip install -r requirements.txt`; upgrade pip with `pip install --upgrade pip` |
-| **Map not displaying / shaking** | Ensure you are using `streamlit-folium >= 0.15.0` with `returned_objects=[]` |
-| **Build errors on macOS (M1/M2)** | Install geospatial dependencies via `conda` instead of `pip` |
+---
 
-## Technical Architecture
+## Suggested repository structure
 
-**Backend:** Streamlit · GeoPandas · PuLP (CBC solver) · OSMnx · NetworkX · Shapely
-
-**Frontend:** Folium · streamlit-folium
-
-**Data flow:**
-1. Load `sc_app_data.json` → parse into GeoDataFrames (cached)
-2. User sets parameters → filter candidates and demand points by ZIP and type
-3. Calculate travel times → build binary coverage matrix
-4. Solve MCLP optimization → select optimal facility set
-5. Render interactive map + statistics
-6. Export to CSV / GeoJSON
-
-## Performance Notes
-
-| Operation | Typical Time |
-|---|---|
-| Data loading (first run) | 1–2 seconds (cached thereafter) |
-| Manhattan distance analysis | 1–5 seconds |
-| Network analysis (first run per ZIP) | 30–120 seconds |
-| Network analysis (cached) | 5–10 seconds |
-| Map rendering | 1–2 seconds |
-
-## File Structure
-
-```
-sc_location_tool/
-├── app.py                # Main Streamlit application
-├── config.py             # Configuration (data path, defaults, settings)
-├── requirements.txt      # Python dependencies
-├── packages.txt          # System-level dependencies for cloud deployment
-├── sc_app_data.json      # Geospatial data file (ZIP boundaries, facilities, demand)
-├── setup.sh              # Linux/macOS setup script
-├── setup.bat             # Windows setup script
-└── README.md             # This file
+```text
+.
+├── app.py
+├── config.py              # local configuration; do not commit sensitive paths
+├── requirements.txt       # optional dependency list
+├── README.md
+├── data/
+│   └── sc_mhc_input.json  # local data; avoid committing confidential data
+├── docs/
+│   └── screenshot.png     # optional screenshot for GitHub README
+└── outputs/               # optional exported results
 ```
 
-## Future Enhancements
+Recommended `.gitignore` entries:
 
-- Multi-objective optimization (coverage + cost)
-- Temporal analysis (time-of-day traffic patterns)
-- Demographic stratification (coverage by age/income group)
-- Scenario comparison across multiple ZIP codes
-- Integration with real-time population and insurance data
+```gitignore
+__pycache__/
+*.pyc
+.venv/
+.env
+config.py
+cache/
+data/*.json
+outputs/
+```
 
-## Acknowledgments
+Do not commit confidential or restricted operational health data. Public community-level data may be shared where allowed, but patient-level or partner operational data should remain protected.
 
-- OpenStreetMap contributors for road network data
-- PuLP / CBC for optimization capabilities
-- Streamlit team for the application framework
+---
+
+## Methodological notes and limitations
+
+This tool is intended to support planning decisions, not replace local knowledge or community engagement.
+
+Important limitations:
+
+- The model optimizes spatial accessibility and selected demand weights; it does not guarantee site permission, staffing feasibility, community trust, or expected utilization.
+- Candidate site quality depends on the completeness and accuracy of the input dataset.
+- Demand estimates based on ACS or disaggregated census data can contain uncertainty.
+- ZIP boundaries do not always align with census geographies.
+- Manhattan-style distance is a fast approximation, not a true road-network route.
+- OSM road-network routing depends on OpenStreetMap completeness and speed assumptions.
+- Live traffic, time-of-day effects, transit access, seasonal demand, and patient preferences are not currently modeled.
+- The app evaluates driving and walking separately; it does not currently solve a combined multimodal optimization problem.
+
+Recommended use:
+
+- Use the tool to shortlist high-potential deployment sites.
+- Review recommendations with local partners.
+- Check operational feasibility in the field.
+- Use exports for site verification, partner discussion, and deployment planning.
+- Update candidate and demand data regularly.
+
+---
 
 ## Citation
 
-If you use this tool in your research, please cite the associated paper:
+If you use this tool or the underlying placement framework, please cite:
 
-**APA**
-> Tanim, S. H., White, D., Witrick, B., & Rennert, L. (2026). Optimizing Mobile Health Clinic Placement via Geospatial Modeling. *medRxiv*, 2025-12.
+```text
+Tanim SH, White DL, Witrick B, Rennert L. Optimizing mobile health clinic placement via geospatial modeling. Public Health in Practice. 2026;11:100805. doi:10.1016/j.puhip.2026.100805
+```
 
-**MLA**
-> Tanim, Shakhawat H., et al. "Optimizing Mobile Health Clinic Placement via Geospatial Modeling." *medRxiv* (2026): 2025-12.
+BibTeX:
 
-**Chicago**
-> Tanim, Shakhawat H., David White, Brian Witrick, and Lior Rennert. "Optimizing Mobile Health Clinic Placement via Geospatial Modeling." *medRxiv* (2026): 2025-12.
+```bibtex
+@article{tanim2026mhcplacement,
+  title = {Optimizing mobile health clinic placement via geospatial modeling},
+  author = {Tanim, Shakhawat H. and White, David L. and Witrick, Brian and Rennert, Lior},
+  journal = {Public Health in Practice},
+  volume = {11},
+  pages = {100805},
+  year = {2026},
+  doi = {10.1016/j.puhip.2026.100805}
+}
+```
 
-**Harvard**
-> Tanim, S.H., White, D., Witrick, B. and Rennert, L., 2026. Optimizing Mobile Health Clinic Placement via Geospatial Modeling. *medRxiv*, pp.2025-12.
+---
 
-**Vancouver**
-> Tanim SH, White D, Witrick B, Rennert L. Optimizing Mobile Health Clinic Placement via Geospatial Modeling. *medRxiv*. 2026 Jan 2:2025-12.
+## Acknowledgments
+
+This project builds on collaborative mobile health clinic deployment research with Clemson Rural Health and Prisma Health. The underlying research was supported by the National Library of Medicine, the National Institute on Drug Abuse, the CDC Center for Forecasting and Outbreak Analytics, Gilead Sciences, and the South Carolina Center for Rural and Primary Healthcare, as described in the associated publication.
+
+---
 
 ## License
 
-This tool is provided as-is for research and analysis purposes.
+Add the repository license here.
+
+The associated publication is open access under the publisher's stated terms. The code license should be specified separately for this repository.
