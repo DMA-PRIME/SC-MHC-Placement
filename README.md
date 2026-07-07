@@ -1,6 +1,6 @@
 # South Carolina Mobile Health Clinic Placement Decision Tool
 
-A Streamlit-based decision-support web tool for identifying high-impact deployment locations for Mobile Health Clinics (MHCs) in South Carolina. The tool uses geospatial demand data, candidate community sites, and travel-time thresholds to recommend MHC locations that maximize coverage of a selected target population.
+A decision-support web tool for identifying high-impact deployment locations for Mobile Health Clinics (MHCs) in South Carolina. The tool uses geospatial demand data, candidate community sites, and travel-time thresholds to recommend MHC locations that maximize coverage of a selected target population.
 
 This repository operationalizes the mobile health clinic placement framework described in:
 
@@ -54,58 +54,50 @@ The app is currently designed for South Carolina ZIP-code-based planning, but th
 
 ## Key features
 
-### 1. County and ZIP-level planning
+### 1. Target-guided county and ZIP planning
 
-Users can begin with a South Carolina county, view ZIP codes inside or overlapping the county, and then select a ZIP code for optimization. ZIP choices are ranked by the selected target variable when demand data are available.
+Users first choose the target category and target measure that define the population or need to optimize. They then select a South Carolina county and ZIP code, or search for any ZIP code directly. When a county is selected, ZIP options are filtered to that county and ranked by the selected target variable when demand data are available.
 
 ### 2. Flexible target population selection
 
-The sidebar allows users to optimize for different need measures, such as uninsured population, age-specific uninsured groups, older adults, zero-vehicle households, non-English-speaking households, veterans, workers, and other demographic groups.
+The tool can optimize for multiple need measures, including uninsured population, age-specific uninsured groups, total population, age groups, non-white population, Hispanic population, zero-vehicle households, non-English-speaking households, veterans, workers, and other demographic indicators available in the input data.
 
 ### 3. MCLP-based site selection
 
-The model selects a fixed number of MHC sites that maximize the covered target population within the selected travel-time threshold. For example, if the user selects 3 MHCs and a 5-minute drive threshold, the tool recommends a three-site deployment plan that maximizes covered demand within 5 minutes.
+The core model is a Maximum Coverage Location Problem. It selects a fixed number of MHC deployment sites that maximize the selected target population covered within the chosen travel-time threshold. For example, if the user selects 3 MHCs and a 5-minute drive threshold, the tool recommends a three-site deployment plan that maximizes covered demand within 5 minutes.
 
-### 4. Ranked alternative deployment plans
+### 4. Coverage and travel-time ranking
 
-The tool separates:
+Deployment plans are ranked lexicographically:
 
-- **Number of MHCs to deploy**: how many mobile clinics are available at the same time.
-- **Alternative plans to show**: how many ranked backup deployment configurations to display.
-
-For one MHC, the app ranks individual candidate sites. For two or more MHCs, it repeatedly solves the MCLP and applies no-good or diversity constraints to generate useful backup plans.
-
-### 5. Coverage-first ranking with travel-time tie-breaking
-
-Plans are ranked lexicographically:
-
-1. highest covered demand first;
-2. lower weighted average nearest travel time among equal-coverage or tied solutions;
+1. highest covered target population first;
+2. lowest weighted average nearest travel time among equal-coverage solutions;
 3. stable site ordering for reproducible display.
 
-### 6. More distinct backup plans
+This keeps population coverage as the primary objective while using travel time to break ties between similarly performing plans.
 
-By default, backup plans prefer site-distinct alternatives so that multiple recommended plans do not simply repeat the same locations. This is useful when decision-makers need practical backup options if a site is unavailable.
+### 5. Ranked and distinct alternative deployment plans
 
-### 7. Previous deployment mode
+The tool separates **Number of MHCs to deploy** from **Alternative plans to show**. For one MHC, it ranks individual candidate sites. For two or more MHCs, it repeatedly solves the MCLP and applies no-good or diversity constraints to generate practical backup configurations.
 
-When a deployment has already occurred, users can add one or more previous deployment locations. The app can exclude demand already covered by those locations and optimize for newly reachable demand.
+By default, backup plans prefer more site-distinct alternatives so decision-makers do not receive several plans that repeat most of the same locations.
 
-Previous deployment locations can be entered by:
+### 6. Previous-deployment extension planning
 
-- selecting one or more existing candidate sites, or
-- entering custom latitude/longitude coordinates.
+When the selected area already has one or more MHC deployment locations, users can enter those prior sites in Advanced settings. The tool can remove demand already covered by previous deployments and optimize the next plan for newly reachable demand.
 
-### 8. Pre-run and post-run site exclusion
+Previous deployment locations can be entered by selecting one or more candidate sites or by entering custom latitude/longitude coordinates.
 
-The app supports two site exclusion workflows:
+### 7. Candidate exclusion and recommended-site review
 
-- **Pre-run exclusion**: remove known infeasible or unavailable sites before optimization.
-- **Post-run review**: inspect recommended sites, mark them infeasible/unavailable, and rerun the optimizer using the remaining candidates.
+The app supports both pre-run and post-run exclusion workflows:
 
-### 9. Operational feasibility fields
+- **Pre-run exclusion:** remove known infeasible or unavailable candidate sites before optimization.
+- **Post-run review:** inspect recommended sites, mark infeasible or unavailable locations, and rerun the optimizer using the remaining candidates.
 
-If the candidate site data include feasibility fields, the app displays and exports them. Supported optional fields include:
+### 8. Operational feasibility fields
+
+If the candidate site data include feasibility fields, the app displays and exports them for field verification. Supported optional fields include:
 
 - `feasibility_status`
 - `parking`
@@ -113,34 +105,24 @@ If the candidate site data include feasibility fields, the app displays and expo
 - `wifi`
 - `ada`
 - `permission`
-- `field_notes`
 
-These fields are not required for the model to run, but they help support field verification and real-world deployment planning.
+These fields are not required for optimization, but they help translate model-selected sites into real-world deployment decisions.
 
-### 10. Fleet size scenario analysis
+### 9. Fleet-size scenario analysis
 
-The tool can run exact best-plan coverage analysis for multiple fleet sizes, such as 1 through 5 MHCs. This helps users understand diminishing returns and marginal gains from adding more mobile clinics.
+The tool can run exact best-plan coverage analysis for multiple fleet sizes, such as 1 through 5 MHCs. This helps users compare marginal coverage gains and understand the potential benefit of adding another mobile clinic.
 
-### 11. Interactive maps
+### 10. Travel-time and distance modes
 
-The app uses Folium and Streamlit-Folium to display:
+The app supports a fast **Manhattan-style distance** approximation by default and optional **OSM road-network routing** when network-based accessibility estimates are needed. Users can run drive or walk scenarios with custom travel-time thresholds.
 
-- county overview maps,
-- selected ZIP maps,
-- candidate site locations,
-- selected MHC sites,
-- covered and uncovered demand points,
-- muted non-selected candidates after optimization,
-- previous deployment locations when extension planning is active.
+### 11. Interactive maps and plan comparison outputs
+
+The app uses Folium and Streamlit-Folium to display county overview maps, ZIP-level candidate sites, selected MHC locations, covered and uncovered demand points, muted non-selected candidates after optimization, and previous deployment locations when extension planning is active.
 
 ### 12. Exportable results
 
-Users can export:
-
-- best plan site list as CSV,
-- all plan summary as CSV,
-- field verification CSV,
-- best plan selected sites as GeoJSON.
+Users can export best-plan site lists, all-plan summary tables, field verification files, and GeoJSON files for reporting, GIS use, or operational follow-up.
 
 ---
 
@@ -239,7 +221,6 @@ The app expects a JSON file referenced by `JSON_PATH` in `config.py`.
       "wifi": "Unknown",
       "ada": "Unknown",
       "permission": "Pending",
-      "field_notes": ""
     }
   ],
   "demand_points": [
@@ -305,7 +286,6 @@ Optional feasibility fields:
 | `wifi` | WiFi availability |
 | `ada` | ADA accessibility |
 | `permission` | Permission or venue approval status |
-| `field_notes` | Notes for field verification |
 
 ### Demand point fields
 
@@ -422,21 +402,21 @@ The app will open in a browser window. If it does not open automatically, Stream
 
 ## Using the web tool
 
-1. Click **Calculate Optimal Sites** after selecting all planning inputs.
-2. Choose a **target category** and target measure, such as uninsured population.
-3. Select a **county** or search any South Carolina ZIP code.
-4. Choose candidate **site types** to include.
-5. Open **Advanced settings** when needed to:
+1. Choose a **target category** and target measure, such as uninsured population.
+2. Select a **county** or search any South Carolina ZIP code. When a county is selected, ZIP choices are filtered and ranked using the selected target variable.
+3. Choose candidate **site types** to include.
+4. Open **Advanced settings** when needed to:
    - add previous deployment locations,
    - prefer site-distinct backup plans,
    - exclude known infeasible sites,
    - enable fleet size scenario analysis,
    - adjust map display settings.
-6. Choose the **number of MHCs to deploy**.
-7. Choose the number of **alternative plans to show**.
-8. Select travel mode: **drive** or **walk**.
-9. Select the maximum travel-time threshold.
-10. Optional: enable road-network routing for network-based travel-time estimates.
+5. Choose the **number of MHCs to deploy**.
+6. Choose the number of **alternative plans to show**.
+7. Select travel mode: **drive** or **walk**.
+8. Select the maximum travel-time threshold.
+9. Optional: enable road-network routing for network-based travel-time estimates.
+10. Click **Calculate Optimal Sites**.
 11. Review the plan comparison table, plan maps, and site-level metrics.
 12. Mark infeasible or unavailable recommended sites and rerun, if needed.
 13. Export CSV or GeoJSON outputs for reporting or field verification.
