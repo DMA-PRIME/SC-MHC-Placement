@@ -8,6 +8,12 @@ This repository operationalizes the mobile health clinic placement framework des
 
 The published study demonstrated that optimized MHC placement can substantially increase the uninsured population reached within practical driving and walking thresholds. This web tool translates that framework into an interactive planning workflow for comparing deployment alternatives, reviewing feasibility, and exporting field-ready site lists.
 
+## Using the hosted web tool
+
+No installation is required to use the hosted version of the tool. Users can open the web app link, select the target variable, county/ZIP code, travel threshold, site types, number of MHCs, and then click **Calculate Optimal Sites**.
+
+Web tool link: [insert link here]
+
 ---
 
 ## Table of contents
@@ -36,19 +42,14 @@ The published study demonstrated that optimized MHC placement can substantially 
 Mobile Health Clinics can reduce geographic and transportation barriers by bringing services directly to communities. However, choosing deployment sites based only on convenience can miss high-need populations or create redundant service areas. This tool supports systematic placement decisions by combining:
 
 - candidate MHC deployment locations,
-- census block or small-area demand points,
-- user-selected target population weights,
+- census block based demand points,
+- user-selected target population,
 - drive or walk travel-time thresholds,
 - a Maximum Coverage Location Problem (MCLP) optimization model,
 - interactive maps and exportable site tables.
 
-The current app version is:
 
-```text
-v9.6 coverage + travel-time ranking + distinct backups
-```
-
-The app is currently designed for South Carolina ZIP-code-based planning, but the workflow can be adapted to other geographies if the input JSON follows the expected schema.
+The app is currently designed for South Carolina ZIP-code-based planning, but the workflow can be adapted to other geographies.
 
 ---
 
@@ -60,7 +61,7 @@ Users first choose the target category and target measure that define the popula
 
 ### 2. Flexible target population selection
 
-The tool can optimize for multiple need measures, including uninsured population, age-specific uninsured groups, total population, age groups, non-white population, Hispanic population, zero-vehicle households, non-English-speaking households, veterans, workers, and other demographic indicators available in the input data.
+The tool can optimize for multiple need measures, including uninsured population, age-specific uninsured groups, total population, age groups, non-white population, Hispanic population, zero-vehicle households, non-English-speaking households, veterans, workers, and other demographic indicators available in the input data. Although disease burden is currently included as a placeholder, the workflow can support disease-specific burden measures if the corresponding data field is added to the input JSON and mapped in the target-variable settings.
 
 ### 3. MCLP-based site selection
 
@@ -72,7 +73,6 @@ Deployment plans are ranked lexicographically:
 
 1. highest covered target population first;
 2. lowest weighted average nearest travel time among equal-coverage solutions;
-3. stable site ordering for reproducible display.
 
 This keeps population coverage as the primary objective while using travel time to break ties between similarly performing plans.
 
@@ -84,9 +84,7 @@ By default, backup plans prefer more site-distinct alternatives so decision-make
 
 ### 6. Previous-deployment extension planning
 
-When the selected area already has one or more MHC deployment locations, users can enter those prior sites in Advanced settings. The tool can remove demand already covered by previous deployments and optimize the next plan for newly reachable demand.
-
-Previous deployment locations can be entered by selecting one or more candidate sites or by entering custom latitude/longitude coordinates.
+When the selected area already has one or more MHC deployment locations, users can enter those prior sites in Advanced settings. The tool can remove demand already covered by previous deployments and optimize the next plan for newly reachable demand. Previous deployment locations can be entered by selecting one or more candidate sites or by entering custom latitude/longitude coordinates.
 
 ### 7. Candidate exclusion and recommended-site review
 
@@ -118,7 +116,7 @@ The app supports a fast **Manhattan-style distance** approximation by default an
 
 ### 11. Interactive maps and plan comparison outputs
 
-The app uses Folium and Streamlit-Folium to display county overview maps, ZIP-level candidate sites, selected MHC locations, covered and uncovered demand points, muted non-selected candidates after optimization, and previous deployment locations when extension planning is active.
+The app display county overview maps, ZIP-level candidate sites, selected MHC locations, covered and uncovered demand points, muted non-selected candidates after optimization, and previous deployment locations when extension planning is active.
 
 ### 12. Exportable results
 
@@ -191,50 +189,6 @@ Important notes:
 
 The app expects a JSON file referenced by `JSON_PATH` in `config.py`.
 
-### Top-level JSON structure
-
-```json
-{
-  "counties": {
-    "045": {
-      "name": "Greenville",
-      "coords": [[34.0, -82.0], [34.1, -82.0], [34.1, -82.1]]
-    }
-  },
-  "zip_boundaries": {
-    "29601": {
-      "po_name": "Greenville",
-      "coords": [[34.84, -82.41], [34.85, -82.41], [34.85, -82.40]]
-    }
-  },
-  "candidate_facilities": [
-    {
-      "facility_id": "site_001",
-      "name": "Example Community Center",
-      "type": "Community Centers",
-      "address": "123 Main St",
-      "latitude": 34.8500,
-      "longitude": -82.4000,
-      "feasibility_status": "Unknown",
-      "parking": "Yes",
-      "restroom": "Yes",
-      "wifi": "Unknown",
-      "ada": "Unknown",
-      "permission": "Pending",
-    }
-  ],
-  "demand_points": [
-    {
-      "dem_id": "block_001",
-      "latitude": 34.8510,
-      "longitude": -82.4020,
-      "uninsured_pop": 25,
-      "tot_pop": 120,
-      "zero_vehicle_hh": 8
-    }
-  ]
-}
-```
 
 ### Required elements
 
@@ -242,8 +196,8 @@ The app requires:
 
 - `counties`
 - `zip_boundaries` or `zips`
-- `candidate_facilities` or `facilities`
-- `demand_points` or `demand`
+- `candidate_facilities` 
+- `demand_points` 
 - `latitude` and `longitude` for every candidate site
 - `latitude` and `longitude` for every demand point
 - at least one demand weight variable used by the target selector
@@ -330,75 +284,7 @@ The tool displays only target variables that are present in the demand point dat
 
 ---
 
-## Installation
 
-Python 3.10 or 3.11 is recommended.
-
-### Option 1: pip
-
-```bash
-git clone <repository-url>
-cd <repository-name>
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
-python -m pip install --upgrade pip
-python -m pip install streamlit pandas numpy geopandas shapely folium streamlit-folium osmnx networkx "pulp[cbc]"
-```
-
-### Option 2: conda, recommended on Windows for geospatial dependencies
-
-```bash
-conda create -n mhc-placement python=3.11 -y
-conda activate mhc-placement
-conda install -c conda-forge streamlit pandas numpy geopandas shapely folium osmnx networkx pulp -y
-python -m pip install streamlit-folium
-```
-
-If the CBC solver is not available through PuLP in your environment, install CBC through conda-forge:
-
-```bash
-conda install -c conda-forge coincbc -y
-```
-
----
-
-## Configuration
-
-Create a file named `config.py` in the repository root:
-
-```python
-from pathlib import Path
-
-JSON_PATH = Path("data/sc_mhc_input.json")
-```
-
-Place your prepared JSON data at that path.
-
-### OSMnx cache directory, optional
-
-The app automatically attempts to configure a writable cache directory for OSMnx. You can override the cache location with:
-
-```bash
-export MHC_OSMNX_CACHE_DIR="/path/to/osmnx_cache"
-```
-
-On Windows PowerShell:
-
-```powershell
-$env:MHC_OSMNX_CACHE_DIR="C:\Users\<you>\AppData\Local\MHC_Placement_Tool\osmnx_cache"
-```
-
----
-
-## Running the app
-
-```bash
-streamlit run app.py
-```
-
-The app will open in a browser window. If it does not open automatically, Streamlit will print a local URL in the terminal.
-
----
 
 ## Using the web tool
 
@@ -471,36 +357,6 @@ The app can export:
 
 ---
 
-## Suggested repository structure
-
-```text
-.
-├── app.py
-├── config.py              # local configuration; do not commit sensitive paths
-├── requirements.txt       # optional dependency list
-├── README.md
-├── data/
-│   └── sc_mhc_input.json  # local data; avoid committing confidential data
-├── docs/
-│   └── screenshot.png     # optional screenshot for GitHub README
-└── outputs/               # optional exported results
-```
-
-Recommended `.gitignore` entries:
-
-```gitignore
-__pycache__/
-*.pyc
-.venv/
-.env
-config.py
-cache/
-data/*.json
-outputs/
-```
-
-Do not commit confidential or restricted operational health data. Public community-level data may be shared where allowed, but patient-level or partner operational data should remain protected.
-
 ---
 
 ## Methodological notes and limitations
@@ -512,11 +368,9 @@ Important limitations:
 - The model optimizes spatial accessibility and selected demand weights; it does not guarantee site permission, staffing feasibility, community trust, or expected utilization.
 - Candidate site quality depends on the completeness and accuracy of the input dataset.
 - Demand estimates based on ACS or disaggregated census data can contain uncertainty.
-- ZIP boundaries do not always align with census geographies.
 - Manhattan-style distance is a fast approximation, not a true road-network route.
-- OSM road-network routing depends on OpenStreetMap completeness and speed assumptions.
 - Live traffic, time-of-day effects, transit access, seasonal demand, and patient preferences are not currently modeled.
-- The app evaluates driving and walking separately; it does not currently solve a combined multimodal optimization problem.
+- The app evaluates driving and walking separately.
 
 Recommended use:
 
@@ -549,6 +403,79 @@ BibTeX:
   doi = {10.1016/j.puhip.2026.100805}
 }
 ```
+
+---
+
+## Optional local setup for developers
+
+Regular users do not need to install anything. The setup instructions below are only for developers or collaborators who want to run the Streamlit app locally, modify the source code, update the input dataset, or deploy another instance of the tool.
+
+Python 3.10 or 3.11 is recommended.
+
+### Option 1: pip
+
+```bash
+git clone <repository-url>
+cd <repository-name>
+python -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+python -m pip install --upgrade pip
+python -m pip install streamlit pandas numpy geopandas shapely folium streamlit-folium osmnx networkx "pulp[cbc]"
+```
+
+### Option 2: conda, recommended on Windows for geospatial dependencies
+
+```bash
+conda create -n mhc-placement python=3.11 -y
+conda activate mhc-placement
+conda install -c conda-forge streamlit pandas numpy geopandas shapely folium osmnx networkx pulp -y
+python -m pip install streamlit-folium
+```
+
+If the CBC solver is not available through PuLP in your environment, install CBC through conda-forge:
+
+```bash
+conda install -c conda-forge coincbc -y
+```
+
+---
+
+### Configuration
+
+Create a file named `config.py` in the repository root:
+
+```python
+from pathlib import Path
+
+JSON_PATH = Path("data/sc_mhc_input.json")
+```
+
+---
+
+### Running the app
+
+```bash
+streamlit run app.py
+```
+
+The app will open in a browser window. If it does not open automatically, Streamlit will print a local URL in the terminal.
+
+
+### Suggested repository structure
+
+```text
+.
+├── app.py
+├── config.py              # local configuration; do not commit sensitive paths
+├── requirements.txt       # optional dependency list
+├── README.md
+├── data/
+│   └── sc_mhc_input.json  # local data; avoid committing confidential data
+├── docs/
+│   └── screenshot.png     # optional screenshot for GitHub README
+└── outputs/               # optional exported results
+```
+
 
 ---
 
