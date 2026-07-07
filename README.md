@@ -12,7 +12,7 @@ The published study demonstrated that optimized MHC placement can substantially 
 
 No installation is required to use the hosted version of the tool. Users can open the web app link, select the target variable, county/ZIP code, travel threshold, site types, number of MHCs, and then click **Calculate Optimal Sites**.
 
-Web tool link: [insert link here]
+Web tool link: https://sc-state-mhc-placement.streamlit.app/
 
 ---
 
@@ -24,7 +24,6 @@ Web tool link: [insert link here]
 - [Travel-time modes](#travel-time-modes)
 - [Data inputs](#data-inputs)
 - [Target population variables](#target-population-variables)
-- [Installation](#installation)
 - [Configuration](#configuration)
 - [Running the app](#running-the-app)
 - [Using the web tool](#using-the-web-tool)
@@ -32,6 +31,7 @@ Web tool link: [insert link here]
 - [Suggested repository structure](#suggested-repository-structure)
 - [Methodological notes and limitations](#methodological-notes-and-limitations)
 - [Citation](#citation)
+- [Optional local setup for developers](#Optional local setup for developers)
 - [Acknowledgments](#acknowledgments)
 - [License](#license)
 
