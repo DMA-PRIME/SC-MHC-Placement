@@ -398,9 +398,9 @@ Tanim, S. H., White, D. L., Witrick, B., & Rennert, L. (2026). Optimizing mobile
 
 ### Web tool and source code
 
-Tanim, S. H., Iuricich, F., & Rennert, L. (2026). *South Carolina Mobile Health Clinic Placement Decision Tool* (Version v9.6) [Web application and source code].  
-Web tool: <WEB_TOOL_URL>  
-Source code: <GITHUB_REPOSITORY_URL>  
+Tanim, S. H., Iuricich, F., & Rennert, L. (2026). *South Carolina Mobile Health Clinic Placement Decision Tool* (Version v0.2) [Web application and source code].  
+Web tool: https://sc-state-mhc-placement.streamlit.app/
+Source code: https://github.com/DMA-PRIME/SC-MHC-Placement/tree/main
 Accessed: <ACCESS_DATE>
 
 ### BibTeX
@@ -421,9 +421,9 @@ Accessed: <ACCESS_DATE>
   title = {South Carolina Mobile Health Clinic Placement Decision Tool},
   author = {Tanim, Shakhawat H. and Iuricich, Federico and Rennert, Lior},
   year = {2026},
-  version = {v9.6},
-  url = {<GITHUB_REPOSITORY_URL>},
-  note = {Web application: <WEB_TOOL_URL>; accessed <ACCESS_DATE>}
+  version = {v0.2},
+  url = {https://github.com/DMA-PRIME/SC-MHC-Placement/tree/main},
+  note = {Web application: https://sc-state-mhc-placement.streamlit.app/; accessed <ACCESS_DATE>}
 }
 ```
 
