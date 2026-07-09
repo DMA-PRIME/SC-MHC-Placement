@@ -2,8 +2,6 @@
 
 A decision-support web tool for identifying high-impact deployment locations for Mobile Health Clinics (MHCs) in South Carolina. The tool uses geospatial demand data, candidate community sites, and travel-time thresholds to recommend MHC locations that maximize coverage of a selected target population.
 
-Public release version: **v0.2**
-
 This repository operationalizes the mobile health clinic placement framework described in:
 
 > Tanim SH, White DL, Witrick B, Rennert L. **Optimizing mobile health clinic placement via geospatial modeling.** *Public Health in Practice.* 2026;11:100805. https://doi.org/10.1016/j.puhip.2026.100805
