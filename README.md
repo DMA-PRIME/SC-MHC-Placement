@@ -18,7 +18,6 @@ Web tool link: https://sc-state-mhc-placement.streamlit.app/
 
 ## Table of contents
 
-## Table of contents
 
 - [Overview](#overview)
 - [Key features](#key-features)
