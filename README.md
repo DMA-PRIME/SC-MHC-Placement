@@ -65,7 +65,6 @@ Deployment plans are ranked lexicographically among generated alternatives:
 
 1. highest covered target population first;
 2. lowest weighted average nearest travel time among plans with the same covered target population, when travel-time estimates are available;
-3. stable site ordering for reproducible display.
 
 This keeps population coverage as the primary objective and uses travel time only as a secondary tie-breaker when plans achieve the same covered target population.
 
