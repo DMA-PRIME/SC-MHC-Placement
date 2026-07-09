@@ -386,23 +386,44 @@ Recommended use:
 
 ## Citation
 
-If you use this tool or the underlying placement framework, please cite:
+If you use this work, please cite both the published methodology paper and the web tool/source code.
 
-```text
-Tanim SH, White DL, Witrick B, Rennert L. Optimizing mobile health clinic placement via geospatial modeling. Public Health in Practice. 2026;11:100805. doi:10.1016/j.puhip.2026.100805
-```
+Cite the paper for the methodological framework, including the location-allocation/MCLP approach, demand weighting, and travel-threshold-based coverage model.
 
-BibTeX:
+Cite the web tool/source code for the software implementation, user interface, deployment-plan ranking, scenario analysis, review/rerun workflow, and export tools.
+
+### Methodology paper
+
+Tanim, S. H., White, D. L., Witrick, B., & Rennert, L. (2026). Optimizing mobile health clinic placement via geospatial modeling. *Public Health in Practice, 11*, 100805. https://doi.org/10.1016/j.puhip.2026.100805
+
+### Web tool and source code
+
+Tanim, S. H., Iuricich, F., & Rennert, L. (2026). *South Carolina Mobile Health Clinic Placement Decision Tool* (Version v9.6) [Web application and source code].  
+Web tool: <WEB_TOOL_URL>  
+Source code: <GITHUB_REPOSITORY_URL>  
+Accessed: <ACCESS_DATE>
+
+### BibTeX
 
 ```bibtex
-@article{tanim2026mhcplacement,
+@article{tanim2026optimizing_mhc,
   title = {Optimizing mobile health clinic placement via geospatial modeling},
   author = {Tanim, Shakhawat H. and White, David L. and Witrick, Brian and Rennert, Lior},
   journal = {Public Health in Practice},
   volume = {11},
   pages = {100805},
   year = {2026},
-  doi = {10.1016/j.puhip.2026.100805}
+  doi = {10.1016/j.puhip.2026.100805},
+  url = {https://doi.org/10.1016/j.puhip.2026.100805}
+}
+
+@software{tanim2026south_carolina_mhc_tool,
+  title = {South Carolina Mobile Health Clinic Placement Decision Tool},
+  author = {Tanim, Shakhawat H. and Iuricich, Federico and Rennert, Lior},
+  year = {2026},
+  version = {v9.6},
+  url = {<GITHUB_REPOSITORY_URL>},
+  note = {Web application: <WEB_TOOL_URL>; accessed <ACCESS_DATE>}
 }
 ```
 
