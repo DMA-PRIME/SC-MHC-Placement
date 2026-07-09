@@ -18,6 +18,8 @@ Web tool link: https://sc-state-mhc-placement.streamlit.app/
 
 ## Table of contents
 
+## Table of contents
+
 - [Overview](#overview)
 - [Key features](#key-features)
 - [Optimization method](#optimization-method)
@@ -31,7 +33,7 @@ Web tool link: https://sc-state-mhc-placement.streamlit.app/
 - [Suggested repository structure](#suggested-repository-structure)
 - [Methodological notes and limitations](#methodological-notes-and-limitations)
 - [Citation](#citation)
-- [Optional local setup for developers](#Optional local setup for developers)
+- [Optional local setup for developers](#Optional-local-setup-for-developers)
 - [Acknowledgments](#acknowledgments)
 - [License](#license)
 
