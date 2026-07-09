@@ -510,6 +510,7 @@ This project builds on collaborative mobile health clinic deployment research wi
 
 ## License
 
-Add the repository license here.
 
-The associated publication is open access under the publisher's stated terms. The code license should be specified separately for this repository.
+This repository is licensed under the MIT License. See the `LICENSE` file for details.
+
+The associated methodology paper is published separately and should be cited as described above.
